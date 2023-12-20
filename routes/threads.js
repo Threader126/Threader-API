@@ -77,7 +77,7 @@ router.get('/download-image', (req, res) => {
   if (!fetchedImageUUID) {
     return res.status(400).json({ error: 'No image has been fetched.' });
   }
-
+ const downloadImg = req.query.url;
   const imgPath = `./threadsRes/image_${fetchedImageUUID}.jpg`; // Use the UUID from the fetched image
 
   res.set({
@@ -104,8 +104,6 @@ router.get('/download-image', (req, res) => {
     res.status(500).json({ error: 'Error streaming image.' });
   });
 });
-
-
 
 router.get('/fetch-crsel-media', async (req, res) => {
   try {
@@ -152,6 +150,8 @@ router.get('/fetch-crsel-media', async (req, res) => {
   }
 });
 
+let fetchedVideoUUID;  // Declare at a higher scope
+
 router.get('/fetch-video', async (req, res) => {
   try {
     const threadUrl = req.query.url;
@@ -167,12 +167,12 @@ router.get('/fetch-video', async (req, res) => {
 
       // Find the video URL with the highest resolution
       const videoCandidates = parseData.thread_items[0].post.video_versions;
-      
+
       if (!videoCandidates || videoCandidates.length === 0) {
         console.log('No video available.');
         return res.status(404).json({ error: 'Video not found.' });
       }
-      
+
       let highestQualityURL = videoCandidates[0].url;
       let highestResolution = videoCandidates[0].width * videoCandidates[0].height;
 
@@ -188,7 +188,10 @@ router.get('/fetch-video', async (req, res) => {
 
       // Generate a UUID for this video download
       const uuid = uuidv4();
-      const vidPath = `./threadsRes/video_${uuid}.mp4`; // Modify the path as needed
+      const vidPath = `./threadsRes/video_${uuid}.mp4`;
+      // Update the fetchedVideoUUID at the higher scope
+      fetchedVideoUUID = vidPath.match(/video_(.*).mp4/)[1];
+
       const vidResponse = await axios.get(highestQualityURL, { responseType: 'stream' });
       const vidStream = fs.createWriteStream(vidPath);
 
@@ -197,7 +200,7 @@ router.get('/fetch-video', async (req, res) => {
       vidStream.on('finish', () => {
         console.log('Video downloaded and saved.');
         const responseJSON = { message: 'Video Downloaded and Saved.' };
-        res.json(responseJSON); 
+        res.json(responseJSON);
       });
 
       vidStream.on('error', (err) => {
@@ -211,32 +214,45 @@ router.get('/fetch-video', async (req, res) => {
   }
 });
 
-
 router.get('/download-video', (req, res) => {
-  const uuid = req.query.uuid; // Retrieve the UUID from the request query
-  const vidPath = `./threadsRes/video_${uuid}.mp4`;
+  if (!fetchedVideoUUID) {
+    return res.status(400).json({ error: 'No video has been fetched.' });
+  }
+
+  const vidPath = `./threadsRes/video_${fetchedVideoUUID}.mp4`;
+
+  if (!fs.existsSync(vidPath)) {
+    console.error('Video not found:', vidPath);
+    return res.status(404).json({ error: 'Video not found.' });
+  }
+
+  const stat = fs.statSync(vidPath);
+
   res.set({
     'Content-Type': 'video/mp4',
-    'Content-Disposition': 'attachment; filename="video.mp4"',
+    'Content-Disposition': `attachment; filename="video_${fetchedVideoUUID}.mp4"`,
+    'Content-Length': stat.size,
   });
+
   const vidStream = fs.createReadStream(vidPath);
   vidStream.pipe(res);
 
-  res.on('finish', () => {
+  vidStream.on('error', (err) => {
+    console.error('Error streaming video:', err);
+    res.status(500).json({ error: 'Error streaming video.' });
+  });
+
+  vidStream.on('finish', () => {
     fs.unlink(vidPath, (error) => {
       if (error) {
-        console.error('Error deleting threads file:', error);
+        console.error('Error deleting video file:', error);
       } else {
-        console.log('Threads video deleted successfully!');
+        console.log('Video file deleted successfully!');
       }
     });
-
-    vidStream.on('error', (err) => {
-      console.error('Error downloading video:', err);
-      res.status(500).json({ error: 'Error downloading video.' });
-    });
-  })
+  });
 });
+
 
 router.get('/download-crsel-media', async (req, res) => {
   const crselDir = './threadsRes/crsel_media';
