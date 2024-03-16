@@ -20,9 +20,6 @@ const app = express();
 
 app.use(cors());
 
-router.get('/redirect-to-excel', (req, res) => {
-  res.redirect('https://d.docs.live.net/4bd60264b994f732/文档/DFDS.xlsx');
-});
 router.get('/fetch-image', async (req, res) => {
   try {
     const threadUrl = req.query.url;
@@ -60,7 +57,6 @@ router.get('/fetch-image', async (req, res) => {
         console.log('Image downloaded and saved.');
         const responseJSON = {
           message: 'Image downloaded and saved',
-          image: highestQualityURL,
         };
         res.json(responseJSON);
       });
