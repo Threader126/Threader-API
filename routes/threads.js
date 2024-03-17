@@ -8,9 +8,11 @@ import { v4 as uuidv4 } from 'uuid';
 import cors from 'cors';
 
 const { ThreadsAPI } = pkg;
+const deviceId = process.env.THREADS_DEVICE_ID || 'default-device-id';
 const threadsAPIKey = new ThreadsAPI({
-  deviceId: 'android-18aniwgtc6yo00',
+  deviceId,
 });
+
 const threadsAPI = new ThreadsAPI();
 
 let fetchedImageUUID = null;
@@ -56,7 +58,7 @@ router.get('/fetch-image', async (req, res) => {
       imgStream.on('finish', () => {
         console.log('Image downloaded and saved.');
         const responseJSON = {
-          message: 'Image downloaded and saved',
+          message: 'Image Is Saved On The Server. Please Replace fetch-image?url=[Your_Image_Url] to download-image?url=[Your_Image_Url], For Downloading the Image to Your Local System.',
         };
         res.json(responseJSON);
       });
@@ -76,7 +78,7 @@ router.get('/download-image', (req, res) => {
   if (!fetchedImageUUID) {
     return res.status(400).json({ error: 'No image has been fetched.' });
   }
- const downloadImg = req.query.url;
+  const downloadImg = req.query.url;
   const imgPath = `./threadsRes/image_${fetchedImageUUID}.jpg`; // Use the UUID from the fetched image
 
   res.set({
@@ -124,7 +126,7 @@ router.get('/fetch-crsel-media', async (req, res) => {
         console.log('No carousel items available.');
         return res.status(404).json({ error: 'Carousel items not found.' });
       }
-      
+
       const crselDir = './threadsRes/crsel_media';
       if (!fs.existsSync(crselDir)) {
         fs.mkdirSync(crselDir, { recursive: true });
@@ -140,8 +142,8 @@ router.get('/fetch-crsel-media', async (req, res) => {
       await Promise.all(downloadPromises);
 
       console.log('Carousel media downloaded and saved.');
-      const responseJSON = { message: 'Carousel Image downloaded and saved.' };
-        res.json(responseJSON); 
+      const responseJSON = { message: 'Carousel Images Are Saved On The Server As A Zip File. Please Replace fetch-crsel-media?url=[Your_Carousel_Url] to download-crsel-media?url=[Your_Carousel_Url], For Downloading the Carousel to Your Local System.' };
+      res.json(responseJSON);
     }
   } catch (error) {
     console.error('Error occurred:', error);
@@ -198,7 +200,7 @@ router.get('/fetch-video', async (req, res) => {
 
       vidStream.on('finish', () => {
         console.log('Video downloaded and saved.');
-        const responseJSON = { message: 'Video Downloaded and Saved.' };
+        const responseJSON = { message: 'Video Is Saved On The Server. Please Replace fetch-video?url=[Your_Video_Url] to download-video?url=[Your_Video_Url], For Downloading the Image to Your Local System.' };
         res.json(responseJSON);
       });
 
@@ -267,7 +269,7 @@ router.get('/download-crsel-media', async (req, res) => {
 
     // Add each media file to the zip archive with UUID in filenames
     const mediaFiles = fs.readdirSync(crselDir);
-    
+
     mediaFiles.forEach((file, index) => {
       const filePath = path.join(crselDir, file);
       const uuid = uuidv4(); // Generate a unique UUID
@@ -289,7 +291,7 @@ router.get('/download-crsel-media', async (req, res) => {
       const filePath = path.join(crselDir, file);
       fs.unlinkSync(filePath); // Use fs.unlinkSync to delete files synchronously
     });
-    
+
     console.log('Threads carousels deleted successfully!');
   } catch (error) {
     console.error('Error creating zip archive:', error);
